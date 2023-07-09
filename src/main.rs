@@ -1,5 +1,5 @@
 use std::cell::Cell;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::ptr;
 
 use libc;
@@ -8,20 +8,18 @@ use minifb::{Key, Window, WindowOptions};
 mod libretro;
 
 struct EmulatorState {
-    frame_buffer: Option<Vec<u32>>,
     buttons_pressed: Option<Vec<i16>>,
 }
 
 static mut CURRENT_EMULATOR_STATE: EmulatorState = EmulatorState {
-    frame_buffer: None,
     buttons_pressed: None,
 };
 
 static mut FRAME: Cell<Option<Vec<u32>>> = Cell::new(None);
 
 unsafe extern "C" fn my_environment(
-    cmd: std::os::raw::c_uint,
-    data: *mut std::os::raw::c_void,
+    _cmd: std::os::raw::c_uint,
+    _data: *mut std::os::raw::c_void,
 ) -> bool {
     // Function body goes here
     // Perform operations using the cmd and data arguments
@@ -148,9 +146,9 @@ fn convert_pixel_array_from_rgb565_to_xrgb8888(
 }
 
 unsafe extern "C" fn my_video_refresh(
-    data: *const ::std::os::raw::c_void,
-    width: ::std::os::raw::c_uint,
-    height: ::std::os::raw::c_uint,
+    data: *const std::os::raw::c_void,
+    width: std::os::raw::c_uint,
+    height: std::os::raw::c_uint,
     pitch: usize,
 ) {
     if data == ptr::null() {
@@ -178,7 +176,7 @@ unsafe extern "C" fn my_video_refresh(
     FRAME.set(Some(buffer_vec));
 }
 
-unsafe extern "C" fn my_audio_sample_batch(data: *const i16, frames: usize) -> usize {
+unsafe extern "C" fn my_audio_sample_batch(_data: *const i16, _frames: usize) -> usize {
     return 0;
 }
 
@@ -198,10 +196,10 @@ pub const DEVICE_ID_JOYPAD_A: libc::c_uint = 8;
 pub const DEVICE_ID_JOYPAD_X: libc::c_uint = 9;
 
 unsafe extern "C" fn my_input_state(
-    port: ::std::os::raw::c_uint,
-    device: ::std::os::raw::c_uint,
-    index: ::std::os::raw::c_uint,
-    id: ::std::os::raw::c_uint,
+    _port: std::os::raw::c_uint,
+    _device: std::os::raw::c_uint,
+    _index: std::os::raw::c_uint,
+    id: std::os::raw::c_uint,
 ) -> i16 {
     let is_pressed = match &CURRENT_EMULATOR_STATE.buttons_pressed {
         Some(buttons_pressed) => buttons_pressed[id as usize],
@@ -211,46 +209,46 @@ unsafe extern "C" fn my_input_state(
     return is_pressed;
 }
 
-unsafe extern "C" fn my_audio_sample(left: i16, right: i16) {
-    // println!("audio sample");
-}
+unsafe extern "C" fn my_audio_sample(_left: i16, _right: i16) {}
 
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    let rom = &args[1];
+struct Emualtor {}
 
-    unsafe {
-        let retro_environment: libretro::retro_environment_t = Some(my_environment);
-        libretro::retro_set_environment(retro_environment);
+impl Emualtor {
+    pub fn init(&self) {
+        unsafe {
+            let retro_environment: libretro::retro_environment_t = Some(my_environment);
+            libretro::retro_set_environment(retro_environment);
 
-        let retro_video_refresh: libretro::retro_video_refresh_t = Some(my_video_refresh);
-        libretro::retro_set_video_refresh(retro_video_refresh);
+            let retro_video_refresh: libretro::retro_video_refresh_t = Some(my_video_refresh);
+            libretro::retro_set_video_refresh(retro_video_refresh);
 
-        let retro_audio_sample: libretro::retro_audio_sample_t = Some(my_audio_sample);
-        libretro::retro_set_audio_sample(retro_audio_sample);
+            let retro_audio_sample: libretro::retro_audio_sample_t = Some(my_audio_sample);
+            libretro::retro_set_audio_sample(retro_audio_sample);
 
-        let retro_audio_sample_batch: libretro::retro_audio_sample_batch_t =
-            Some(my_audio_sample_batch);
-        libretro::retro_set_audio_sample_batch(retro_audio_sample_batch);
+            let retro_audio_sample_batch: libretro::retro_audio_sample_batch_t =
+                Some(my_audio_sample_batch);
+            libretro::retro_set_audio_sample_batch(retro_audio_sample_batch);
 
-        let retro_input_poll: libretro::retro_input_poll_t = Some(my_input_poll);
-        libretro::retro_set_input_poll(retro_input_poll);
+            let retro_input_poll: libretro::retro_input_poll_t = Some(my_input_poll);
+            libretro::retro_set_input_poll(retro_input_poll);
 
-        let retro_input_state: libretro::retro_input_state_t = Some(my_input_state);
-        libretro::retro_set_input_state(retro_input_state);
+            let retro_input_state: libretro::retro_input_state_t = Some(my_input_state);
+            libretro::retro_set_input_state(retro_input_state);
 
-        let retro_input_poll: libretro::retro_input_poll_t = Some(my_input_poll);
-        libretro::retro_set_input_poll(retro_input_poll);
+            let retro_input_poll: libretro::retro_input_poll_t = Some(my_input_poll);
+            libretro::retro_set_input_poll(retro_input_poll);
 
-        libretro::retro_init();
+            libretro::retro_init();
+        }
+    }
 
+    pub fn load_rom(&self, rom: &str) {
         let mut file = std::fs::File::open(rom).unwrap();
 
         let file_size = file.metadata().unwrap().len();
+
         let mut buffer = Vec::with_capacity(file_size as usize);
-        // let mut buffer = [0u8; file_size as usize];
         file.read_to_end(&mut buffer).unwrap();
-        // file.read(&mut buffer).unwrap();
 
         let size = file_size as usize;
 
@@ -261,95 +259,153 @@ fn main() {
             meta: std::ptr::null(),
         };
 
-        if !libretro::retro_load_game(&info) {
-            return;
+        unsafe {
+            if !libretro::retro_load_game(&info) {
+                return;
+            }
+        }
+    }
+
+    pub fn push_buttons(&self, buttons: Vec<i16>) {
+        unsafe {
+            CURRENT_EMULATOR_STATE.buttons_pressed = Some(buttons);
+        }
+    }
+
+    pub fn run(&self) -> (Option<Vec<u32>>, Option<(i16, i16)>) {
+        let mut video;
+
+        unsafe {
+            libretro::retro_run();
+            video = FRAME.replace(None);
         }
 
-        let WIDTH = 240;
-        let HEIGHT = 160;
+        return (video, None);
+    }
+}
 
-        let mut window = Window::new(
-            "Test - ESC to exit",
-            WIDTH,
-            HEIGHT,
-            WindowOptions::default(),
-        )
-        .unwrap_or_else(|e| {
-            panic!("{}", e);
-        });
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    let rom = &args[1];
 
-        // Limit to max ~30 fps update rate
-        // window.limit_update_rate(Some(std::time::Duration::from_micros(33300)));
+    let emu = Emualtor {};
 
-        // Limit to max ~60 fps update rate
-        window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
+    emu.init();
+    emu.load_rom(rom);
 
-        /*let mut fps_timer = std::time::Instant::now();
-        let mut fps_counter = 0;*/
+    let width = 240;
+    let height = 160;
 
-        while window.is_open() && !window.is_key_down(Key::Escape) {
-            libretro::retro_run();
+    let mut window = Window::new(
+        "Test - ESC to exit",
+        width,
+        height,
+        WindowOptions::default(),
+    )
+    .unwrap_or_else(|e| {
+        panic!("{}", e);
+    });
 
-            /*fps_counter += 1;
-            let elapsed = fps_timer.elapsed();
-            if elapsed >= std::time::Duration::from_secs(1) {
-                let fps = fps_counter as f64 / elapsed.as_secs_f64();
-                window.set_title(&format!("Rust Game (FPS: {:.2})", fps));
-                fps_counter = 0;
-                fps_timer = std::time::Instant::now();
-            }*/
+    // Limit to max ~30 fps update rate
+    // window.limit_update_rate(Some(std::time::Duration::from_micros(33300)));
 
-            let mut this_frames_pressed_buttons = vec![0; 16];
+    // Limit to max ~60 fps update rate
+    window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
-            let mini_fb_keys = window.get_keys();
-            for key in mini_fb_keys {
-                match key {
-                    Key::Enter => {
-                        this_frames_pressed_buttons
-                            [libretro::RETRO_DEVICE_ID_JOYPAD_START as usize] = 1;
-                    }
-                    Key::Right => {
-                        this_frames_pressed_buttons
-                            [libretro::RETRO_DEVICE_ID_JOYPAD_RIGHT as usize] = 1;
-                    }
-                    Key::Left => {
-                        this_frames_pressed_buttons
-                            [libretro::RETRO_DEVICE_ID_JOYPAD_LEFT as usize] = 1;
-                    }
-                    Key::Up => {
-                        this_frames_pressed_buttons[libretro::RETRO_DEVICE_ID_JOYPAD_UP as usize] =
-                            1;
-                    }
-                    Key::Down => {
-                        this_frames_pressed_buttons
-                            [libretro::RETRO_DEVICE_ID_JOYPAD_DOWN as usize] = 1;
-                    }
-                    Key::A => {
-                        this_frames_pressed_buttons[libretro::RETRO_DEVICE_ID_JOYPAD_A as usize] =
-                            1;
-                    }
-                    Key::S => {
-                        this_frames_pressed_buttons[libretro::RETRO_DEVICE_ID_JOYPAD_B as usize] =
-                            1;
-                    }
-                    _ => {
-                        println!("Unhandled Key Pressed: {:?}", key);
-                    }
+    /*let mut fps_timer = std::time::Instant::now();
+    let mut fps_counter = 0;*/
+
+    while window.is_open() && !window.is_key_down(Key::Escape) {
+        //libretro::retro_run();
+
+        /*fps_counter += 1;
+        let elapsed = fps_timer.elapsed();
+        if elapsed >= std::time::Duration::from_secs(1) {
+            let fps = fps_counter as f64 / elapsed.as_secs_f64();
+            window.set_title(&format!("Rust Game (FPS: {:.2})", fps));
+            fps_counter = 0;
+            fps_timer = std::time::Instant::now();
+        }*/
+
+        /*
+            pub const RETRO_DEVICE_ID_JOYPAD_B: u32 = 0;
+            pub const RETRO_DEVICE_ID_JOYPAD_Y: u32 = 1;
+            pub const RETRO_DEVICE_ID_JOYPAD_SELECT: u32 = 2;
+            pub const RETRO_DEVICE_ID_JOYPAD_START: u32 = 3;
+            pub const RETRO_DEVICE_ID_JOYPAD_UP: u32 = 4;
+            pub const RETRO_DEVICE_ID_JOYPAD_DOWN: u32 = 5;
+            pub const RETRO_DEVICE_ID_JOYPAD_LEFT: u32 = 6;
+            pub const RETRO_DEVICE_ID_JOYPAD_RIGHT: u32 = 7;
+            pub const RETRO_DEVICE_ID_JOYPAD_A: u32 = 8;
+            pub const RETRO_DEVICE_ID_JOYPAD_X: u32 = 9;
+            pub const RETRO_DEVICE_ID_JOYPAD_L: u32 = 10;
+            pub const RETRO_DEVICE_ID_JOYPAD_R: u32 = 11;
+            pub const RETRO_DEVICE_ID_JOYPAD_L2: u32 = 12;
+            pub const RETRO_DEVICE_ID_JOYPAD_R2: u32 = 13;
+            pub const RETRO_DEVICE_ID_JOYPAD_L3: u32 = 14;
+            pub const RETRO_DEVICE_ID_JOYPAD_R3: u32 = 15;
+        */
+
+        //   BY SELECT START   UDLR AXLR L2 R2 L3 R3
+        //  [00 0      0       0000 0000 0  0  0  0]
+        let mut this_frames_pressed_buttons = vec![0; 16];
+
+        let mini_fb_keys = window.get_keys();
+        for key in mini_fb_keys {
+            match key {
+                Key::Enter => {
+                    this_frames_pressed_buttons[libretro::RETRO_DEVICE_ID_JOYPAD_START as usize] =
+                        1;
+                }
+                Key::Right => {
+                    this_frames_pressed_buttons[libretro::RETRO_DEVICE_ID_JOYPAD_RIGHT as usize] =
+                        1;
+                }
+                Key::Left => {
+                    this_frames_pressed_buttons[libretro::RETRO_DEVICE_ID_JOYPAD_LEFT as usize] = 1;
+                }
+                Key::Up => {
+                    this_frames_pressed_buttons[libretro::RETRO_DEVICE_ID_JOYPAD_UP as usize] = 1;
+                }
+                Key::Down => {
+                    this_frames_pressed_buttons[libretro::RETRO_DEVICE_ID_JOYPAD_DOWN as usize] = 1;
+                }
+                // VIM keys.
+                Key::L => {
+                    this_frames_pressed_buttons[libretro::RETRO_DEVICE_ID_JOYPAD_RIGHT as usize] =
+                        1;
+                }
+                Key::H => {
+                    this_frames_pressed_buttons[libretro::RETRO_DEVICE_ID_JOYPAD_LEFT as usize] = 1;
+                }
+                Key::K => {
+                    this_frames_pressed_buttons[libretro::RETRO_DEVICE_ID_JOYPAD_UP as usize] = 1;
+                }
+                Key::J => {
+                    this_frames_pressed_buttons[libretro::RETRO_DEVICE_ID_JOYPAD_DOWN as usize] = 1;
+                }
+                Key::A => {
+                    this_frames_pressed_buttons[libretro::RETRO_DEVICE_ID_JOYPAD_A as usize] = 1;
+                }
+                Key::S => {
+                    this_frames_pressed_buttons[libretro::RETRO_DEVICE_ID_JOYPAD_B as usize] = 1;
+                }
+                _ => {
+                    println!("Unhandled Key Pressed: {:?}", key);
                 }
             }
+        }
 
-            CURRENT_EMULATOR_STATE.buttons_pressed = Some(this_frames_pressed_buttons);
+        emu.push_buttons(this_frames_pressed_buttons);
 
-            let buffer = FRAME.take();
-            //println!("buffer: {:?}", buffer);
+        let (video, _) = emu.run();
 
-            match buffer {
-                Some(buffer) => {
-                    window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
-                }
-                None => {
-                    println!("We don't have a buffer to display");
-                }
+        match video {
+            Some(buffer) => {
+                window.update_with_buffer(&buffer, width, height).unwrap();
+            }
+            None => {
+                println!("We don't have a buffer to display");
             }
         }
     }
