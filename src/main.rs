@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::io::{Read, Write};
 use std::ptr;
 
@@ -15,6 +16,8 @@ static mut CURRENT_EMULATOR_STATE: EmulatorState = EmulatorState {
     frame_buffer: None,
     buttons_pressed: None,
 };
+
+static mut FRAME: Cell<Option<Vec<u32>>> = Cell::new(None);
 
 unsafe extern "C" fn my_environment(
     cmd: std::os::raw::c_uint,
@@ -171,7 +174,8 @@ unsafe extern "C" fn my_video_refresh(
 
     let buffer_vec = Vec::from(result);
 
-    CURRENT_EMULATOR_STATE.frame_buffer = Some(buffer_vec);
+    //CURRENT_EMULATOR_STATE.frame_buffer = Some(buffer_vec);
+    FRAME.set(Some(buffer_vec));
 }
 
 unsafe extern "C" fn my_audio_sample_batch(data: *const i16, frames: usize) -> usize {
@@ -336,7 +340,10 @@ fn main() {
 
             CURRENT_EMULATOR_STATE.buttons_pressed = Some(this_frames_pressed_buttons);
 
-            match &CURRENT_EMULATOR_STATE.frame_buffer {
+            let buffer = FRAME.take();
+            //println!("buffer: {:?}", buffer);
+
+            match buffer {
                 Some(buffer) => {
                     window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
                 }
