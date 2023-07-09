@@ -264,17 +264,15 @@ impl Emualtor {
     }
 
     pub fn load_rom(&self, rom: &str) {
-        let mut file = std::fs::File::open(rom).unwrap();
+        let mut file = std::fs::File::open(rom).expect("could not open the rom's file");
+        let size = file.metadata().unwrap().len() as usize;
 
-        let file_size = file.metadata().unwrap().len();
-
-        let mut buffer = Vec::with_capacity(file_size as usize);
-        file.read_to_end(&mut buffer).unwrap();
-
-        let size = file_size as usize;
+        let mut buffer = Vec::with_capacity(size);
+        file.read_to_end(&mut buffer)
+            .expect("could not read the rom's file");
 
         let info = libretro::retro_game_info {
-            path: std::ffi::CString::new(rom.clone()).unwrap().as_ptr(),
+            path: rom.as_ptr() as *const libc::c_char,
             data: buffer.as_ptr() as *const libc::c_void,
             size,
             meta: std::ptr::null(),
