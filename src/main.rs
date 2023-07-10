@@ -10,6 +10,7 @@ fn main() {
     let emu = emulator::Emualtor {};
 
     emu.init();
+
     emu.load_rom(rom);
 
     let width = 240;
@@ -84,6 +85,14 @@ fn main() {
                 }
                 Key::S => {
                     buttons[emulator::RETRO_DEVICE_ID_JOYPAD_B as usize] = 1;
+                }
+                Key::F1 => {
+                    println!("Save State");
+                    emu.save_state();
+                }
+                Key::F2 => {
+                    println!("Load State");
+                    emu.load_state();
                 }
                 _ => {
                     println!("Unhandled Key Pressed: {:?}", key);

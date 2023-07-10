@@ -1,6 +1,6 @@
 use libc;
 use std::cell::Cell;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::ptr;
 
 mod libretro;
@@ -237,27 +237,19 @@ pub struct Emualtor {}
 impl Emualtor {
     pub fn init(&self) {
         unsafe {
-            let retro_environment: libretro::retro_environment_t = Some(my_environment);
-            libretro::retro_set_environment(retro_environment);
+            libretro::retro_set_environment(Some(my_environment));
 
-            let retro_video_refresh: libretro::retro_video_refresh_t = Some(my_video_refresh);
-            libretro::retro_set_video_refresh(retro_video_refresh);
+            libretro::retro_set_video_refresh(Some(my_video_refresh));
 
-            let retro_audio_sample: libretro::retro_audio_sample_t = Some(my_audio_sample);
-            libretro::retro_set_audio_sample(retro_audio_sample);
+            libretro::retro_set_audio_sample(Some(my_audio_sample));
 
-            let retro_audio_sample_batch: libretro::retro_audio_sample_batch_t =
-                Some(my_audio_sample_batch);
-            libretro::retro_set_audio_sample_batch(retro_audio_sample_batch);
+            libretro::retro_set_audio_sample_batch(Some(my_audio_sample_batch));
 
-            let retro_input_poll: libretro::retro_input_poll_t = Some(my_input_poll);
-            libretro::retro_set_input_poll(retro_input_poll);
+            libretro::retro_set_input_poll(Some(my_input_poll));
 
-            let retro_input_state: libretro::retro_input_state_t = Some(my_input_state);
-            libretro::retro_set_input_state(retro_input_state);
+            libretro::retro_set_input_state(Some(my_input_state));
 
-            let retro_input_poll: libretro::retro_input_poll_t = Some(my_input_poll);
-            libretro::retro_set_input_poll(retro_input_poll);
+            libretro::retro_set_input_poll(Some(my_input_poll));
 
             libretro::retro_init();
         }
@@ -285,6 +277,36 @@ impl Emualtor {
         }
     }
 
+    pub fn save_state(&self) {
+        unsafe {
+            let size = libretro::retro_serialize_size();
+            let mut buffer: Vec<u8> = vec![0; size];
+
+            if !libretro::retro_serialize(buffer.as_mut_ptr() as *mut std::ffi::c_void, size) {
+                return;
+            }
+
+            let mut file =
+                std::fs::File::create("save_state").expect("could not create the save state");
+            file.write_all(&buffer).unwrap();
+        }
+    }
+
+    pub fn load_state(&self) {
+        let mut file =
+            std::fs::File::open("save_state").expect("could not open the save state file");
+        let size = file.metadata().unwrap().len() as usize;
+
+        let mut buffer = Vec::with_capacity(size);
+        file.read_to_end(&mut buffer).unwrap();
+
+        unsafe {
+            if !libretro::retro_unserialize(buffer.as_mut_ptr() as *mut std::ffi::c_void, size) {
+                return;
+            }
+        }
+    }
+
     pub fn push_buttons(&self, buttons: Vec<i16>) {
         unsafe {
             BUTTONS_PRESSED.set(Some(buttons));
@@ -292,7 +314,7 @@ impl Emualtor {
     }
 
     pub fn run(&self) -> (Option<Vec<u32>>, Option<(i16, i16)>) {
-        let mut video;
+        let video;
 
         unsafe {
             libretro::retro_run();
