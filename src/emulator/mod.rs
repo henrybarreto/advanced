@@ -1,39 +1,41 @@
-use libc;
 use std::cell::Cell;
 use std::io::{Read, Write};
 use std::ptr;
 
 mod libretro;
 
-struct EmulatorState {
-    buttons_pressed: Option<Vec<i16>>,
-}
-
-/*static mut CURRENT_EMULATOR_STATE: EmulatorState = EmulatorState {
-    buttons_pressed: None,
-};*/
-
 static mut BUTTONS_PRESSED: Cell<Option<Vec<i16>>> = Cell::new(None);
 
 static mut VIDEO_FRAME_DATA: Cell<Option<Vec<u32>>> = Cell::new(None);
 static mut AUDIO_FRAME_DATA: Cell<Option<Vec<i16>>> = Cell::new(None);
 
-pub const RETRO_DEVICE_ID_JOYPAD_B: u32 = 0;
-pub const RETRO_DEVICE_ID_JOYPAD_Y: u32 = 1;
-pub const RETRO_DEVICE_ID_JOYPAD_SELECT: u32 = 2;
-pub const RETRO_DEVICE_ID_JOYPAD_START: u32 = 3;
-pub const RETRO_DEVICE_ID_JOYPAD_UP: u32 = 4;
-pub const RETRO_DEVICE_ID_JOYPAD_DOWN: u32 = 5;
-pub const RETRO_DEVICE_ID_JOYPAD_LEFT: u32 = 6;
-pub const RETRO_DEVICE_ID_JOYPAD_RIGHT: u32 = 7;
-pub const RETRO_DEVICE_ID_JOYPAD_A: u32 = 8;
-pub const RETRO_DEVICE_ID_JOYPAD_X: u32 = 9;
-pub const RETRO_DEVICE_ID_JOYPAD_L: u32 = 10;
-pub const RETRO_DEVICE_ID_JOYPAD_R: u32 = 11;
-pub const RETRO_DEVICE_ID_JOYPAD_L2: u32 = 12;
-pub const RETRO_DEVICE_ID_JOYPAD_R2: u32 = 13;
-pub const RETRO_DEVICE_ID_JOYPAD_L3: u32 = 14;
-pub const RETRO_DEVICE_ID_JOYPAD_R3: u32 = 15;
+/*pub const RETRO_DEVICE_ID_JOYPAD_B: i16 = 0;
+pub const RETRO_DEVICE_ID_JOYPAD_Y: i16 = 1;
+pub const RETRO_DEVICE_ID_JOYPAD_SELECT: i16 = 2;
+pub const RETRO_DEVICE_ID_JOYPAD_START: i16 = 3;
+pub const RETRO_DEVICE_ID_JOYPAD_UP: i16 = 4;
+pub const RETRO_DEVICE_ID_JOYPAD_DOWN: i16 = 5;
+pub const RETRO_DEVICE_ID_JOYPAD_LEFT: i16 = 6;
+pub const RETRO_DEVICE_ID_JOYPAD_RIGHT: i16 = 7;
+pub const RETRO_DEVICE_ID_JOYPAD_A: i16 = 8;
+pub const RETRO_DEVICE_ID_JOYPAD_X: i16 = 9;
+pub const RETRO_DEVICE_ID_JOYPAD_L: i16 = 10;
+pub const RETRO_DEVICE_ID_JOYPAD_R: i16 = 11;
+pub const RETRO_DEVICE_ID_JOYPAD_L2: i16 = 12;
+pub const RETRO_DEVICE_ID_JOYPAD_R2: i16 = 13;
+pub const RETRO_DEVICE_ID_JOYPAD_L3: i16 = 14;
+pub const RETRO_DEVICE_ID_JOYPAD_R3: i16 = 15;*/
+
+pub const DEVICE_ID_JOYPAD_B: i16 = 0;
+pub const DEVICE_ID_JOYPAD_Y: i16 = 1;
+pub const DEVICE_ID_JOYPAD_SELECT: i16 = 2;
+pub const DEVICE_ID_JOYPAD_START: i16 = 3;
+pub const DEVICE_ID_JOYPAD_UP: i16 = 4;
+pub const DEVICE_ID_JOYPAD_DOWN: i16 = 5;
+pub const DEVICE_ID_JOYPAD_LEFT: i16 = 6;
+pub const DEVICE_ID_JOYPAD_RIGHT: i16 = 7;
+pub const DEVICE_ID_JOYPAD_A: i16 = 8;
+pub const DEVICE_ID_JOYPAD_X: i16 = 9;
 
 //   BY SELECT START   UDLR AXLR L2 R2 L3 R3
 //  [00 0      0       0000 0000 0  0  0  0]
@@ -204,17 +206,6 @@ unsafe extern "C" fn my_audio_sample_batch(_data: *const i16, _frames: usize) ->
 unsafe extern "C" fn my_input_poll() {
     // println!("input poll");
 }
-
-pub const DEVICE_ID_JOYPAD_B: libc::c_uint = 0;
-pub const DEVICE_ID_JOYPAD_Y: libc::c_uint = 1;
-pub const DEVICE_ID_JOYPAD_SELECT: libc::c_uint = 2;
-pub const DEVICE_ID_JOYPAD_START: libc::c_uint = 3;
-pub const DEVICE_ID_JOYPAD_UP: libc::c_uint = 4;
-pub const DEVICE_ID_JOYPAD_DOWN: libc::c_uint = 5;
-pub const DEVICE_ID_JOYPAD_LEFT: libc::c_uint = 6;
-pub const DEVICE_ID_JOYPAD_RIGHT: libc::c_uint = 7;
-pub const DEVICE_ID_JOYPAD_A: libc::c_uint = 8;
-pub const DEVICE_ID_JOYPAD_X: libc::c_uint = 9;
 
 unsafe extern "C" fn my_input_state(
     _port: std::os::raw::c_uint,
