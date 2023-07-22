@@ -1,3 +1,3 @@
 # Advanced
 
-Advanced is a framebuffer libretro front-end.
+Advanced is a libretro front-end for mGBA 
