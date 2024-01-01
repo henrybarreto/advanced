@@ -158,7 +158,7 @@ fn convert_pixel_array_from_rgb565_to_xrgb8888(
             //  (b) =             00000000 00000000 00000000 11111000
             //                    -----------------------------------
             //                    11111111 11111000 00000000 11111000
-            let xrgb8888_pixel = (0xFF << 24) | (r << 16) | (g << 8) | b;
+            let xrgb8888_pixel = (0xFF << 24) | (b << 16) | (g << 8) | r;
 
             // Storing the converted pixel in the output frame
             converted_frame[y * width + x] = xrgb8888_pixel;
@@ -193,7 +193,7 @@ unsafe extern "C" fn my_video_refresh(
         pitch,
     );
 
-    let buffer_vec = Vec::from(result);
+    let buffer_vec: Vec<u32> = Vec::from(result);
 
     //CURRENT_EMULATOR_STATE.frame_buffer = Some(buffer_vec);
     VIDEO_FRAME_DATA.set(Some(buffer_vec));
@@ -235,8 +235,6 @@ impl Emualtor {
             libretro::retro_set_audio_sample(Some(my_audio_sample));
 
             libretro::retro_set_audio_sample_batch(Some(my_audio_sample_batch));
-
-            libretro::retro_set_input_poll(Some(my_input_poll));
 
             libretro::retro_set_input_state(Some(my_input_state));
 

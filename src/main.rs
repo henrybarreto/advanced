@@ -7,7 +7,12 @@ static EMU: emulator::Emualtor = emulator::Emualtor {};
 
 fn draw(mut wrapper_query: Query<&mut PixelsWrapper>) {
     // Query the `PixelsWrapper` component that owns an instance of `Pixels` for the given window.
-    let Ok(mut wrapper) = wrapper_query.get_single_mut() else { return };
+    let Ok(mut wrapper) = wrapper_query.get_single_mut() else {
+        return;
+    };
+
+    let format = wrapper.pixels.surface_texture_format();
+    dbg!(format);
 
     wrapper.pixels.resize_buffer(240, 160).unwrap();
     // Get a mutable slice for the pixel buffer.
@@ -80,7 +85,16 @@ fn main() {
     EMU.load_rom("test.gba");
 
     App::new()
-        .add_plugins((DefaultPlugins, PixelsPlugin::default()))
+        .add_plugins((
+            DefaultPlugins,
+            PixelsPlugin {
+                primary_window: Some(PixelsOptions {
+                    width: 240,
+                    height: 160,
+                    ..Default::default()
+                }),
+            },
+        ))
         // Add systems that draw to the buffer to `Draw` schedule
         // to ensure they are rendered in the current frame.
         .add_systems(Draw, draw)
