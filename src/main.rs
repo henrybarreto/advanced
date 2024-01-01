@@ -14,7 +14,9 @@ fn draw(mut wrapper_query: Query<&mut PixelsWrapper>) {
     let format = wrapper.pixels.surface_texture_format();
     dbg!(format);
 
+    // set the default resolution of the GBA screen.
     wrapper.pixels.resize_buffer(240, 160).unwrap();
+
     // Get a mutable slice for the pixel buffer.
     let frame: &mut [u8] = wrapper.pixels.frame_mut();
 
