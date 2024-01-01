@@ -32,7 +32,7 @@ fn draw(mut wrapper_query: Query<&mut PixelsWrapper>) {
     }
 }
 
-fn keyboard_input(keys: Res<Input<KeyCode>>) {
+fn input(keys: Res<Input<KeyCode>>) {
     let mut buttons = [0 as i16; 16];
 
     //   BY SELECT START   UDLR AXLR L2 R2 L3 R3
@@ -98,6 +98,6 @@ fn main() {
         // Add systems that draw to the buffer to `Draw` schedule
         // to ensure they are rendered in the current frame.
         .add_systems(Draw, draw)
-        .add_systems(Update, keyboard_input)
+        .add_systems(Update, input)
         .run();
 }
