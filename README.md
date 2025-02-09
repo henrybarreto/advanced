@@ -1,5 +1,6 @@
 # Advanced
 
+```
               _                               _ 
      /\      | |                             | |
     /  \   __| |_   ____ _ _ __   ___ ___  __| |
@@ -7,6 +8,7 @@
   / ____ \ (_| |\ V / (_| | | | | (_|  __/ (_| |
  /_/    \_\__,_| \_/ \__,_|_| |_|\___\___|\__,_|
 
+```
 
 It's an experimental and learning propose libRetro front-end to mGBA.
 
