@@ -44,9 +44,6 @@ unsafe extern "C" fn my_environment(
     _cmd: std::os::raw::c_uint,
     _data: *mut std::os::raw::c_void,
 ) -> bool {
-    // Function body goes here
-    // Perform operations using the cmd and data arguments
-
     /*match cmd {
         libretro::RETRO_ENVIRONMENT_SET_PIXEL_FORMAT => {
             /*let pixel_format = *(data as *const u32);
@@ -72,34 +69,29 @@ unsafe extern "C" fn my_environment(
     return false;
 }
 
-/// rgb565 is the default pixel format of mGBA core, however, the minifb is not able to display it. So we need to
-/// convert it to xrgb8888
+/// Convert an RGB565 framebuffer to XRGB8888 format.
+///
+/// The mGBA core outputs pixels in RGB565 format, but pixels requires XRGB8888.
+/// This function converts each pixel accordingly.
 ///
 /// ### RETRO_PIXEL_FORMAT_RGB565
-/// You can read this as Red,Green,Blue
-///
-/// - 5 bits for red
-/// - 6 bits for green (Humans are better at seeing moire shades of green than red/blue)
-/// - 5 bits for blue
-/// - 16 bits total (2 bytes per pixel))
-///
+/// - 5 bits for red   (RRRRR)
+/// - 6 bits for green (GGGGGG) -> Humans perceive more shades of green.
+/// - 5 bits for blue  (BBBBB)
+/// - 16 bits total (2 bytes per pixel).
 ///
 /// ### RETRO_PIXEL_FORMAT_XRGB8888
-/// You can read this as Nothing,Red,Green,Blue
-///
-/// - 8 bits at the start that are unused (X)
-/// - 8 bits for red
-/// - 8 bits for green
-/// - 8 bits for blue
-/// - 32 bits total (4 bytes per pixel)
+/// - 8-bit padding (unused, set to 0xFF for full opacity).
+/// - 8 bits for red   (RRRRRRRR)
+/// - 8 bits for green (GGGGGGGG)
+/// - 8 bits for blue  (BBBBBBBB)
+/// - 32 bits total (4 bytes per pixel).
 fn convert_pixel_array_from_rgb565_to_xrgb8888(
     frame: &[u8],
     width: usize,
     height: usize,
     pitch: usize,
 ) -> Box<[u32]> {
-    // TODO: undestand EACH LINE of this function!
-
     let frame_size = width * height;
     let mut converted_frame = vec![0u32; frame_size].into_boxed_slice();
 
@@ -113,54 +105,44 @@ fn convert_pixel_array_from_rgb565_to_xrgb8888(
             let byte1 = row_bytes[pixel_offset] as u32;
             let byte2 = row_bytes[pixel_offset + 1] as u32;
 
-            // One pixel are two bytes or 16 bits. (byte1 and byte2).
+            // One pixel is two bytes or 16 bits. (byte1 and byte2).
             //                           byte2    byte1
             // pixel = 00000000 00000000 ^^^^^^^^ ^^^^^^^^
             let pixel = (byte2 << 8) | byte1;
 
-            // Extracting color components from RGB565 format. (RRRRR GGGGGG BBBBB)
+            // Extract the color components from the 16-bit RGB565 format:
             //
-            // RGB565 format:
-            // RED   GREEN  BLUE
-            // 00000 000000 00000 <- 16 bits (2 bytes)
+            // RGB565 bit layout:
+            //  RRRRR GGGGGG BBBBB
             //
-            // Pixel example:
-            // 00000000 00000000 11111000 00011111
+            // Extract red (5 bits) -> shift right 11 places, mask to keep 5 bits, then scale to 8 bits.
             //
-            //                             RED   GREEN  BLUE
-            // let r = ((00000000 00000000 11111 000000 11111 >> 11 = 00000000 00000000 11111 &
-            //                                                        00000000 00000000 11111 =
-            //                                                        00000000 00000000 11111) << 3 = 00000000 00000000 00000000 11111000)
-            let r = ((pixel >> 11) & 0b00011111) << 3;
-            //                             RED   GREEN  BLUE
-            // let g = ((00000000 00000000 11111 000000 11111 >> 5 = 00000000 00000000 11111000 000 &
-            //                                                       00000000 00000000 00000111 111 =
-            //                                                       00000000 00000000 00000000 000 = 00000000 00000000 00000000 00000000
-            let g = ((pixel >> 5) & 0b00111111) << 2;
-            //                             RED   GREEN  BLUE
-            // let b = ((00000000 00000000 11111 000000 11111 &
-            //           00000000 00000000 11111 000000 11111 =
-            //           00000000 00000000 11111 000000 11111) << 3 = 00000000 00000000 00000000 11111000)
+            //  RRRRR GGGGGG BBBBB   (Original)
+            //  00000 000000 RRRRR   (After `>> 11`)
+            //
+            let r = ((pixel >> 11) & 0x1F) << 3;
+
+            // Extract green (6 bits) -> shift right 5 places, mask to keep 6 bits, then scale to 8 bits.
+            //
+            // RRRRR GGGGGG BBBBB    (Original)
+            // 00000 000000 GGGGGG   (After `>> 5`)
+            //
+            let g = ((pixel >> 5) & 0x3F) << 2;
+            // Extract blue (5 bits) -> mask to keep 5 bits, then scale to 8 bits.
             let b = (pixel & 0x1F) << 3;
 
-            // Combining color components into XRGB8888 format. (AAAAAAAA RRRRRRRR GGGGGGGG BBBBBBBB)
-            //
-            //                     ALPHA        RED         GREEN      BLUE
-            //                     11111111     00000000    00000000   00000000  <- 32 bits (4 bytes)
-            //                     ^^^^^^^^     xxxxxxxx    00000000   00000000  <- 24 bits (3 bytes)
-            //                     ^^^^^^^^     ^^^^^^^^    xxxxxxxx   00000000  <- 16 bits (2 bytes)
-            //                     ^^^^^^^^     ^^^^^^^^    ^^^^^^^^   xxxxxxxx  <- 8 bits  (1 byte)
-            //
-            // Pixel example:
-            //  (0xFF << 24) =    11111111 00000000 00000000 00000000
-            //  (r << 16) =       00000000 11111000 00000000 00000000
-            //  (g << 8) =        00000000 00000000 00000000 00000000
-            //  (b) =             00000000 00000000 00000000 11111000
-            //                    -----------------------------------
-            //                    11111111 11111000 00000000 11111000
+            // Combine into XRGB8888 format (0xFF for full opacity).
+            /*
+                X  = 0xFF  (11111111 00000000 00000000 00000000)
+                B  = 0x80  (00000000 10000000 00000000 00000000)
+                G  = 0xC0  (00000000 00000000 11000000 00000000)
+                R  = 0x40  (00000000 00000000 00000000 01000000)
+                -----------------------------------------------
+                Result =   11111111 10000000 11000000 01000000
+            */
             let xrgb8888_pixel = (0xFF << 24) | (b << 16) | (g << 8) | r;
 
-            // Storing the converted pixel in the output frame
+            // Store the converted pixel in the output frame.
             converted_frame[y * width + x] = xrgb8888_pixel;
         }
     }
@@ -182,7 +164,6 @@ unsafe extern "C" fn my_video_refresh(
     // let length_of_frame_buffer = width * height;
     let length_of_frame_buffer = ((pitch as u32) * height) * 2 as u32;
 
-    //let buffer_slice = std::slice::from_raw_parts(data as *const u8, pitch * height as usize);
     let buffer_slice =
         std::slice::from_raw_parts(data as *const u8, length_of_frame_buffer as usize);
 

@@ -1,3 +1,0 @@
-[submodule "include/mgba"]
-	path = include/mgba
-	url = https://github.com/libretro/mgba.git

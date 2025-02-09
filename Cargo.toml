@@ -4,9 +4,9 @@ description = "Advanced is a framebuffer libretro front-end"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 libc = "0.2.147"
 bevy = { version = "0.11", default_features = false }
 bevy_pixels = "0.11"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

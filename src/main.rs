@@ -1,4 +1,4 @@
-use bevy::{input::keyboard::KeyboardInput, prelude::*};
+use bevy::prelude::*;
 use bevy_pixels::prelude::*;
 
 mod emulator;
@@ -11,8 +11,7 @@ fn draw(mut wrapper_query: Query<&mut PixelsWrapper>) {
         return;
     };
 
-    let format = wrapper.pixels.surface_texture_format();
-    dbg!(format);
+    let _ = wrapper.pixels.surface_texture_format();
 
     // set the default resolution of the GBA screen.
     wrapper.pixels.resize_buffer(240, 160).unwrap();
